@@ -1,0 +1,22 @@
+# Backend
+Backend/var/
+Backend/vendor/
+Backend/.env.local
+Backend/.env.*.local
+
+# Frontend
+Frontend/node_modules/
+Frontend/.expo/
+Frontend/dist/
+Frontend/.env.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
