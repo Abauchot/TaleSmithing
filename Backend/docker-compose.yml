@@ -1,0 +1,56 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  database:
+    image: postgres:16-alpine
+    container_name: talesmithing-database
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-app}
+      POSTGRES_USER: ${POSTGRES_USER:-app}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-!ChangeMe!}
+    ports:
+      - "5432:5432"
+    volumes:
+      - database_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-d", "${POSTGRES_DB:-app}", "-U", "${POSTGRES_USER:-app}"]
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+    networks:
+      - talesmithing-network
+
+  # Backend - Symfony API Platform
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: talesmithing-backend
+    working_dir: /var/www/html
+    environment:
+      APP_ENV: ${APP_ENV:-dev}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-app}:${POSTGRES_PASSWORD:-!ChangeMe!}@database:5432/${POSTGRES_DB:-app}?serverVersion=16&charset=utf8
+    ports:
+      - "8000:9000"
+    volumes:
+      - .:/var/www/html
+      - backend_vendor:/var/www/html/vendor
+    depends_on:
+      database:
+        condition: service_healthy
+    networks:
+      - talesmithing-network
+    command: >
+      sh -c "
+        php bin/console doctrine:migrations:migrate --no-interaction --allow-no-migration || true &&
+        php -S 0.0.0.0:9000 -t public
+      "
+
+volumes:
+  database_data:
+  backend_vendor:
+
+networks:
+  talesmithing-network:
+    driver: bridge
