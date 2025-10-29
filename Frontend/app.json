@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "Frontend",
-    "slug": "Frontend",
+    "slug": "talesmithing",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -43,6 +43,13 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "bb671b07-7ce8-46c8-96dc-fbb1cf16ae33"
+      }
+    },
+    "owner": "abauchot"
   }
 }
