@@ -3,14 +3,18 @@
 namespace App\EventListener;
 
 use App\Entity\User;
-use Doctrine\Common\EventSubscriber;
-use Doctrine\ORM\Event\LifecycleEventArgs;
+use Doctrine\Bundle\DoctrineBundle\Attribute\AsEntityListener;
+use Doctrine\ORM\Events;
+use Doctrine\ORM\Event\PrePersistEventArgs;
+use Doctrine\ORM\Event\PreUpdateEventArgs;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 /**
- * Doctrine subscriber that hashes User passwords on persist/update.
+ * Doctrine entity listener that hashes User passwords on persist/update.
  */
-class HashUserPasswordSubscriber implements EventSubscriber
+#[AsEntityListener(event: Events::prePersist, entity: User::class)]
+#[AsEntityListener(event: Events::preUpdate, entity: User::class)]
+class HashUserPasswordSubscriber
 {
     private UserPasswordHasherInterface $passwordHasher;
 
@@ -19,46 +23,31 @@ class HashUserPasswordSubscriber implements EventSubscriber
         $this->passwordHasher = $passwordHasher;
     }
 
-    public function getSubscribedEvents(): array
+    public function prePersist(User $user, PrePersistEventArgs $args): void
     {
-        return ['prePersist', 'preUpdate'];
+        $this->hashPassword($user);
     }
 
-    public function prePersist(LifecycleEventArgs $args): void
+    public function preUpdate(User $user, PreUpdateEventArgs $args): void
     {
-        $this->hashPassword($args);
+        $this->hashPassword($user);
+        $em = $args->getObjectManager();
+        $meta = $em->getClassMetadata(User::class);
+        $em->getUnitOfWork()->recomputeSingleEntityChangeSet($meta, $user);
     }
 
-    public function preUpdate(LifecycleEventArgs $args): void
+    private function hashPassword(User $user): void
     {
-        $this->hashPassword($args);
-
-        // When updating the entity we must recompute the change set so Doctrine persists the hashed password
-        $entity = $args->getEntity();
-        $em = $args->getEntityManager();
-        $meta = $em->getClassMetadata(get_class($entity));
-        $em->getUnitOfWork()->recomputeSingleEntityChangeSet($meta, $entity);
-    }
-
-    private function hashPassword(LifecycleEventArgs $args): void
-    {
-    $entity = $args->getEntity();
-
-        if (!$entity instanceof User) {
-            return;
-        }
-
-        $plain = $entity->getPassword();
+        $plain = $user->getPassword();
         if (null === $plain || $plain === '') {
             return;
         }
 
-        // Basic heuristic: if password looks already hashed (starts with $), skip hashing.
         if (str_starts_with($plain, '$')) {
             return;
         }
 
-        $hashed = $this->passwordHasher->hashPassword($entity, $plain);
-        $entity->setPassword($hashed);
+        $hashed = $this->passwordHasher->hashPassword($user, $plain);
+        $user->setPassword($hashed);
     }
 }
