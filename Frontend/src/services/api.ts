@@ -1,5 +1,4 @@
 import { API_CONFIG, getApiUrl } from '../config/api';
-import { secureStorage } from '../utils/secureStorage';
 import type { LoginCredentials, LoginResponse, RegisterData, User } from '../types/auth';
 
 /**
@@ -90,6 +89,27 @@ class ApiClient {
     });
 
     return this.handleResponse<User>(response);
+  }
+
+  /**
+   * Get users collection
+   */
+  async getUsers(): Promise<User[]> {
+    const response = await fetch(getApiUrl(API_CONFIG.ENDPOINTS.USER), {
+      method: 'GET',
+      headers: await this.getHeaders(true),
+    });
+
+    const data = await this.handleResponse<any>(response);
+    if (Array.isArray(data)) {
+      return data as User[];
+    }
+    if (data && Array.isArray(data['hydra:member'])) {
+      return data['hydra:member'] as User[];
+    }
+
+    // Unknown shape, try to coerce
+    return [];
   }
 
   /**

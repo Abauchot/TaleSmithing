@@ -1,19 +1,19 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { apiClient } from '../services/api';
 import { secureStorage } from '../utils/secureStorage';
-import { 
-  decodeToken, 
-  isTokenExpired, 
-  willTokenExpireSoon, 
+import {
+  decodeToken,
+  isTokenExpired,
+  willTokenExpireSoon,
   getUserFromToken,
-  getTokenTimeToExpiry 
+  getTokenTimeToExpiry
 } from '../utils/jwt';
 import { API_CONFIG } from '../config/api';
-import type { 
+import type {
   User,
-  LoginCredentials, 
-  RegisterData, 
-  AuthState 
+  LoginCredentials,
+  RegisterData,
+  AuthState
 } from '../types/auth';
 
 /**
@@ -39,8 +39,8 @@ export const useAuth = () => {
    * Update authentication state
    */
   const updateAuthState = useCallback((
-    token: string | null, 
-    user: User | null, 
+    token: string | null,
+    user: User | null,
     error: string | null = null
   ) => {
     setState({
@@ -51,7 +51,6 @@ export const useAuth = () => {
       error,
     });
 
-    // Update API client token
     apiClient.setToken(token);
   }, []);
 
@@ -59,7 +58,6 @@ export const useAuth = () => {
    * Schedule automatic token refresh
    */
   const scheduleTokenRefresh = useCallback((token: string) => {
-    // Clear existing timeout
     if (refreshTimeoutRef.current) {
       clearTimeout(refreshTimeoutRef.current);
     }
@@ -88,10 +86,8 @@ export const useAuth = () => {
       ]);
 
       if (storedToken && !isTokenExpired(storedToken)) {
-        // Token is valid
         let user = storedUser;
 
-        // If no user data stored, try to extract from token
         if (!user) {
           user = getUserFromToken(storedToken);
         }
@@ -99,7 +95,6 @@ export const useAuth = () => {
         updateAuthState(storedToken, user);
         scheduleTokenRefresh(storedToken);
       } else {
-        // Token is expired or doesn't exist
         await secureStorage.clearAll();
         updateAuthState(null, null);
       }
@@ -118,33 +113,39 @@ export const useAuth = () => {
 
       const response = await apiClient.login(credentials);
 
-      // Save token and refresh token
       await secureStorage.saveToken(response.token);
       if (response.refresh_token) {
         await secureStorage.saveRefreshToken(response.refresh_token);
       }
-
-      // Extract user data from token
       const user = getUserFromToken(response.token);
 
-      // Try to fetch full user data from API
       try {
         if (user?.id) {
           const fullUser = await apiClient.getCurrentUser(user.id);
           await secureStorage.saveUser(fullUser);
           updateAuthState(response.token, fullUser);
         } else {
-          await secureStorage.saveUser(user);
-          updateAuthState(response.token, user);
+          try {
+            const users = await apiClient.getUsers();
+            const match = users.find(u => (u.email && u.email === user?.email) || (u.nickname && u.nickname === user?.email));
+            if (match) {
+              await secureStorage.saveUser(match);
+              updateAuthState(response.token, match);
+            } else {
+              await secureStorage.saveUser(user);
+              updateAuthState(response.token, user);
+            }
+          } catch (err) {
+            console.warn('Could not fetch users collection to resolve full user:', err);
+            await secureStorage.saveUser(user);
+            updateAuthState(response.token, user);
+          }
         }
       } catch (error) {
-        // If fetching full user fails, use token data
         console.warn('Could not fetch full user data:', error);
         await secureStorage.saveUser(user);
         updateAuthState(response.token, user);
       }
-
-      // Schedule token refresh
       scheduleTokenRefresh(response.token);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Login failed';
@@ -160,10 +161,7 @@ export const useAuth = () => {
     try {
       setState(prev => ({ ...prev, isLoading: true, error: null }));
 
-      // Register user
       await apiClient.register(data);
-
-      // After registration, automatically login
       await login({
         email: data.email,
         password: data.password,
@@ -188,18 +186,15 @@ export const useAuth = () => {
       if (!currentToken) {
         throw new Error('No token to refresh');
       }
-
-      // If token is still valid for a while, no need to refresh yet
       if (!willTokenExpireSoon(currentToken, API_CONFIG.TOKEN_REFRESH_THRESHOLD)) {
         scheduleTokenRefresh(currentToken);
         return;
       }
 
-      // Try to refresh with refresh token if available
       if (refreshToken) {
         try {
           const response = await apiClient.refreshToken(refreshToken);
-          
+
           await secureStorage.saveToken(response.token);
           if (response.refresh_token) {
             await secureStorage.saveRefreshToken(response.refresh_token);
@@ -208,14 +203,14 @@ export const useAuth = () => {
           const user = await secureStorage.getUser();
           updateAuthState(response.token, user);
           scheduleTokenRefresh(response.token);
-          
+
           return;
         } catch (error) {
           console.warn('Refresh token failed:', error);
         }
       }
 
-      // If refresh token doesn't work or doesn't exist, logout
+
       await logout();
     } catch (error) {
       console.error('Error refreshing token:', error);
@@ -228,19 +223,13 @@ export const useAuth = () => {
    */
   const logout = useCallback(async () => {
     try {
-      // Clear refresh timeout
       if (refreshTimeoutRef.current) {
         clearTimeout(refreshTimeoutRef.current);
       }
-
-      // Clear all stored data
       await secureStorage.clearAll();
-
-      // Update state
       updateAuthState(null, null);
     } catch (error) {
       console.error('Error during logout:', error);
-      // Still update state even if clearing storage fails
       updateAuthState(null, null, 'Logout completed with errors');
     }
   }, [updateAuthState]);
@@ -250,12 +239,10 @@ export const useAuth = () => {
    */
   useEffect(() => {
     if (state.token && !isTokenExpired(state.token)) {
-      // Check if token needs refresh
       if (willTokenExpireSoon(state.token, API_CONFIG.TOKEN_REFRESH_THRESHOLD)) {
         refreshToken();
       }
     } else if (state.token) {
-      // Token is expired
       logout();
     }
   }, [state.token]);
@@ -266,7 +253,6 @@ export const useAuth = () => {
   useEffect(() => {
     loadStoredAuth();
 
-        // Cleanup on unmount
     return () => {
       if (refreshTimeoutRef.current) {
         clearTimeout(refreshTimeoutRef.current);

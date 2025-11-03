@@ -19,7 +19,7 @@ use Symfony\Component\Validator\Validator\ValidatorInterface;
         required: true,
         content: new OA\JsonContent(
             type: 'object',
-            required: ['email', 'password', 'username'],
+            required: ['email', 'password', 'nickname'],
             properties: [
                 new OA\Property(
                     property: 'email', 
@@ -32,9 +32,9 @@ use Symfony\Component\Validator\Validator\ValidatorInterface;
                     format: 'password'
                 ),
                 new OA\Property(
-                    property: 'username', 
+                    property: 'nickname', 
                     type: 'string', 
-                    format: 'username'
+                    format: 'nickname'
                 ),
             ]
         )
@@ -77,11 +77,11 @@ final class RegisterController extends AbstractController
         $data = json_decode($request->getContent(), true);
 
         $email = $data['email'] ?? null;
-        $nickname = $data['username'] ?? null; 
+        $nickname = $data['nickname'] ?? $data['username'] ?? null;
         $password = $data['password'] ?? null;
 
         if (!$email || !$nickname || !$password) {
-            return new JsonResponse(['message' => 'Email, username or password missing'], 400);
+            return new JsonResponse(['message' => 'Email, nickname or password missing'], 400);
         }
 
         $existingUser = $entityManager->getRepository(User::class)->findOneBy(['email' => $email]);
@@ -91,7 +91,7 @@ final class RegisterController extends AbstractController
 
         $existingNickname = $entityManager->getRepository(User::class)->findOneBy(['nickname' => $nickname]);
         if ($existingNickname) {
-            return new JsonResponse(['message' => 'User with this username already exists'], 409);
+            return new JsonResponse(['message' => 'User with this nickname already exists'], 409);
         }
 
         $user = new User();
@@ -100,7 +100,6 @@ final class RegisterController extends AbstractController
         $hashedPassword = $passwordHasher->hashPassword($user, $password);
         $user->setPassword($hashedPassword);
 
-        // Validate the entity using Symfony Validator
         $violations = $validator->validate($user);
         if (count($violations) > 0) {
             $messages = [];

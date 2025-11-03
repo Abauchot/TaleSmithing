@@ -1,6 +1,5 @@
 import type { User } from './user';
 
-// Re-export User so it can be imported from auth types
 export type { User };
 
 export interface LoginCredentials {
@@ -11,7 +10,7 @@ export interface LoginCredentials {
 export interface RegisterData {
   email: string;
   password: string;
-  username?: string; // Optional username field
+  nickname: string;
 }
 
 export interface AuthTokens {
