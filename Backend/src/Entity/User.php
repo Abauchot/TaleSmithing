@@ -13,6 +13,7 @@ use ApiPlatform\Metadata\Post;
 use ApiPlatform\Metadata\Put;
 use ApiPlatform\Metadata\Delete;
 use Symfony\Component\Serializer\Annotation\Groups;
+use Symfony\Component\Validator\Constraints as Assert;
 
 #[ApiResource(
     normalizationContext: ['groups' => ['user:read']],
@@ -49,6 +50,8 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
 
     #[ORM\Column(length: 180)]
     #[Groups(['user:read','user:write'])]
+    #[Assert\NotBlank(message: 'Email is required.')]
+    #[Assert\Email(message: 'This value is not a valid email address.')]
     private ?string $email = null;
 
     #[ORM\Column(length: 100)]
@@ -67,6 +70,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
      */
     #[ORM\Column]
     #[Groups(['user:write'])]
+    #[Assert\NotBlank(message: 'Password is required.')]
     private ?string $password = null;
 
     #[ORM\Column(type: 'datetime_immutable')]

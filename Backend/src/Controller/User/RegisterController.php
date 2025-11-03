@@ -10,6 +10,7 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
+use Symfony\Component\Validator\Validator\ValidatorInterface;
 
 #[Route('/api/register', name: 'app_register', methods: ['POST'])]
 #[OA\Post(
@@ -69,6 +70,7 @@ final class RegisterController extends AbstractController
     ) {}
 
     public function __invoke(Request $request, 
+    ValidatorInterface $validator,
     UserPasswordHasherInterface $passwordHasher, 
     EntityManagerInterface $entityManager
     ): JsonResponse {
@@ -97,6 +99,17 @@ final class RegisterController extends AbstractController
         $user->setNickname($nickname);
         $hashedPassword = $passwordHasher->hashPassword($user, $password);
         $user->setPassword($hashedPassword);
+
+        // Validate the entity using Symfony Validator
+        $violations = $validator->validate($user);
+        if (count($violations) > 0) {
+            $messages = [];
+            foreach ($violations as $violation) {
+                $messages[] = $violation->getPropertyPath() . ': ' . $violation->getMessage();
+            }
+
+            return new JsonResponse(['message' => 'Validation failed', 'errors' => $messages], 400);
+        }
 
         $entityManager->persist($user);
         $entityManager->flush();

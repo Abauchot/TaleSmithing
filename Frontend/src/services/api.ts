@@ -32,7 +32,13 @@ class ApiClient {
       
       try {
         const errorJson = JSON.parse(error);
-        errorMessage = errorJson.message || errorJson.error || response.statusText;
+        if (Array.isArray(errorJson.violations) && errorJson.violations.length > 0) {
+          errorMessage = errorJson.violations.map((v: any) => v.message).join('; ');
+        } else if (errorJson['hydra:description']) {
+          errorMessage = errorJson['hydra:description'];
+        } else {
+          errorMessage = errorJson.message || errorJson.error || response.statusText;
+        }
       } catch {
         errorMessage = error || response.statusText;
       }
