@@ -1,0 +1,7 @@
+gesdinet_jwt_refresh_token:
+    refresh_token_class: App\Entity\RefreshToken
+    ttl: 2592000  # 30 days in seconds
+    ttl_update: true  # Update the TTL on each refresh
+    user_identity_field: email  # Field to identify the user
+    manager_type: orm  # Use Doctrine ORM
+    single_use: false  # Allow token to be used multiple times before expiration
