@@ -24,18 +24,16 @@ use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
                     property: 'email', 
                     type: 'string', 
                     format: 'email', 
-                    example: 'user@example.com'
                 ),
                 new OA\Property(
                     property: 'password', 
                     type: 'string', 
-                    format: 'password', 
-                    example: 'password123'
+                    format: 'password'
                 ),
                 new OA\Property(
                     property: 'username', 
                     type: 'string', 
-                    example: 'username123'
+                    format: 'username'
                 ),
             ]
         )

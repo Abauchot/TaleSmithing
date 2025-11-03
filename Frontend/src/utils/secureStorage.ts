@@ -10,13 +10,17 @@ const USER_KEY = 'user_data';
  * Uses SecureStore on native platforms and localStorage on web
  */
 class SecureStorage {
+  private isWeb(): boolean {
+    return Platform.OS === 'web' && typeof window !== 'undefined' && typeof window.localStorage !== 'undefined';
+  }
+
   /**
    * Save token to secure storage
    */
   async saveToken(token: string): Promise<void> {
     try {
-      if (Platform.OS === 'web' || Platform.OS === 'android' || Platform.OS === 'ios') {
-        localStorage.setItem(TOKEN_KEY, token);
+      if (this.isWeb()) {
+        window.localStorage.setItem(TOKEN_KEY, token);
       } else {
         await SecureStore.setItemAsync(TOKEN_KEY, token);
       }
@@ -31,8 +35,8 @@ class SecureStorage {
    */
   async getToken(): Promise<string | null> {
     try {
-      if (Platform.OS === 'web' || Platform.OS === 'android' || Platform.OS === 'ios') {
-        return localStorage.getItem(TOKEN_KEY);
+      if (this.isWeb()) {
+        return window.localStorage.getItem(TOKEN_KEY);
       } else {
         return await SecureStore.getItemAsync(TOKEN_KEY);
       }
@@ -47,8 +51,8 @@ class SecureStorage {
    */
   async saveRefreshToken(refreshToken: string): Promise<void> {
     try {
-      if (Platform.OS === 'web') {
-        localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
+      if (this.isWeb()) {
+        window.localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
       } else {
         await SecureStore.setItemAsync(REFRESH_TOKEN_KEY, refreshToken);
       }
@@ -63,8 +67,8 @@ class SecureStorage {
    */
   async getRefreshToken(): Promise<string | null> {
     try {
-      if (Platform.OS === 'web') {
-        return localStorage.getItem(REFRESH_TOKEN_KEY);
+      if (this.isWeb()) {
+        return window.localStorage.getItem(REFRESH_TOKEN_KEY);
       } else {
         return await SecureStore.getItemAsync(REFRESH_TOKEN_KEY);
       }
@@ -80,8 +84,8 @@ class SecureStorage {
   async saveUser(user: any): Promise<void> {
     try {
       const userData = JSON.stringify(user);
-      if (Platform.OS === 'web') {
-        localStorage.setItem(USER_KEY, userData);
+      if (this.isWeb()) {
+        window.localStorage.setItem(USER_KEY, userData);
       } else {
         await SecureStore.setItemAsync(USER_KEY, userData);
       }
@@ -97,8 +101,8 @@ class SecureStorage {
   async getUser(): Promise<any | null> {
     try {
       let userData: string | null;
-      if (Platform.OS === 'web') {
-        userData = localStorage.getItem(USER_KEY);
+      if (this.isWeb()) {
+        userData = window.localStorage.getItem(USER_KEY);
       } else {
         userData = await SecureStore.getItemAsync(USER_KEY);
       }
@@ -114,10 +118,10 @@ class SecureStorage {
    */
   async clearAll(): Promise<void> {
     try {
-      if (Platform.OS === 'web') {
-        localStorage.removeItem(TOKEN_KEY);
-        localStorage.removeItem(REFRESH_TOKEN_KEY);
-        localStorage.removeItem(USER_KEY);
+      if (this.isWeb()) {
+        window.localStorage.removeItem(TOKEN_KEY);
+        window.localStorage.removeItem(REFRESH_TOKEN_KEY);
+        window.localStorage.removeItem(USER_KEY);
       } else {
         await SecureStore.deleteItemAsync(TOKEN_KEY);
         await SecureStore.deleteItemAsync(REFRESH_TOKEN_KEY);
